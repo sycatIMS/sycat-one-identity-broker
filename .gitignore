@@ -16,3 +16,4 @@ tyk.io.signing.key
 *~
 .terraform**
 .DS_Store
+vendor
