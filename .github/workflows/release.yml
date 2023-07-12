@@ -64,17 +64,17 @@ jobs:
           username: ${{ github.actor  }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Unlock agent and set tag
-        id: targets
-        shell: bash
-        env:
-          NFPM_STD_PASSPHRASE: ${{ secrets.SIGNING_KEY_PASSPHRASE }}
-          GPG_FINGERPRINT: 284069BE9E79B0E137E275F921D9F7E1C24DC664
-          PKG_SIGNING_KEY: ${{ secrets.SIGNING_KEY }}
-        run: |
-          ci/bin/unlock-agent.sh
-          current_tag=${GITHUB_REF##*/}
-          echo "tag=${current_tag}" >> $GITHUB_OUTPUT
+#      - name: Unlock agent and set tag
+#        id: targets
+#        shell: bash
+#        env:
+#          NFPM_STD_PASSPHRASE: ${{ secrets.SIGNING_KEY_PASSPHRASE }}
+#          GPG_FINGERPRINT: 284069BE9E79B0E137E275F921D9F7E1C24DC664
+#          PKG_SIGNING_KEY: ${{ secrets.SIGNING_KEY }}
+#        run: |
+#          ci/bin/unlock-agent.sh
+#          current_tag=${GITHUB_REF##*/}
+#          echo "tag=${current_tag}" >> $GITHUB_OUTPUT
 
       - name: Delete old release assets
         if: startsWith(github.ref, 'refs/tags')
@@ -98,10 +98,10 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           CGO_ENABLED: 0
-          NFPM_STD_PASSPHRASE: ${{ secrets.SIGNING_KEY_PASSPHRASE }}
-          NFPM_PAYG_PASSPHRASE: ${{ secrets.SIGNING_KEY_PASSPHRASE }}
-          GPG_FINGERPRINT: 12B5D62C28F57592D1575BD51ED14C59E37DAC20
-          PKG_SIGNING_KEY: ${{ secrets.SIGNING_KEY }}
+#          NFPM_STD_PASSPHRASE: ${{ secrets.SIGNING_KEY_PASSPHRASE }}
+#          NFPM_PAYG_PASSPHRASE: ${{ secrets.SIGNING_KEY_PASSPHRASE }}
+#          GPG_FINGERPRINT: 12B5D62C28F57592D1575BD51ED14C59E37DAC20
+#          PKG_SIGNING_KEY: ${{ secrets.SIGNING_KEY }}
           GOLANG_CROSS: ${{ matrix.golang_cross }}
           DEBVERS: ${{ matrix.debvers }}
 

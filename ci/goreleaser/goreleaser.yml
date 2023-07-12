@@ -16,58 +16,6 @@ builds:
       - arm64
     binary: tyk-identity-broker
 
-dockers:
-# Build tykio/tyk-identity-broker, docker.tyk.io/tyk-identity-broker/tyk-identity-broker (amd64)
-- ids:
-    - std
-  image_templates:
-    - "tykio/tyk-identity-broker:{{ .Tag }}-amd64"
-    - "docker.tyk.io/tyk-identity-broker/tyk-identity-broker:{{ .Tag }}"
-  build_flag_templates:
-    - "--build-arg=PORTS=80"
-    - "--platform=linux/amd64"
-    - "--label=org.opencontainers.image.created={{.Date}}"
-    - "--label=org.opencontainers.image.title={{.ProjectName}}"
-    - "--label=org.opencontainers.image.revision={{.FullCommit}}"
-    - "--label=org.opencontainers.image.version={{.Version}}"
-  use: buildx
-  goarch: amd64
-  goos: linux
-  dockerfile: ci/Dockerfile.std
-  extra_files:
-    - "ci/install/"
-    - "README.md"
-# Build tykio/tyk-identity-broker, docker.tyk.io/tyk-identity-broker/tyk-identity-broker (arm64)
-- ids:
-    - std
-  image_templates:
-    - "tykio/tyk-identity-broker:{{ .Tag }}-arm64"
-    - "docker.tyk.io/tyk-identity-broker/tyk-identity-broker:{{ .Tag }}-arm64"
-  build_flag_templates:
-    - "--build-arg=PORTS=80"
-    - "--platform=linux/arm64"
-    - "--label=org.opencontainers.image.created={{.Date}}"
-    - "--label=org.opencontainers.image.title={{.ProjectName}}"
-    - "--label=org.opencontainers.image.revision={{.FullCommit}}"
-    - "--label=org.opencontainers.image.version={{.Version}}"
-  use: buildx
-  goarch: arm64
-  goos: linux
-  dockerfile: ci/Dockerfile.std
-  extra_files:
-    - "ci/install/"
-    - "README.md"
-
-docker_manifests:
-  - name_template: tykio/tyk-identity-broker:{{ .Tag }}
-    image_templates:
-    - tykio/tyk-identity-broker:{{ .Tag }}-amd64
-    - tykio/tyk-identity-broker:{{ .Tag }}-arm64
-  - name_template: tykio/tyk-identity-broker:v{{ .Major }}.{{ .Minor }}{{.Prerelease}}
-    image_templates:
-    - tykio/tyk-identity-broker:{{ .Tag }}-amd64
-    - tykio/tyk-identity-broker:{{ .Tag }}-arm64
-
 nfpms:
   - id: std
     vendor: "Tyk Technologies Ltd"
@@ -104,19 +52,10 @@ nfpms:
         file_name_template: '{{ .PackageName }}_{{ replace .Version "-" "~" }}_{{ .Arch }}{{ if .Arm }}v{{ .Arm }}{{ end }}{{ if .Mips }}_{{ .Mips }}{{ end }}'
         replacements:
           arm: arm64
-    deb:
-      signature:
-        key_file: tyk.io.signing.key
-        type: origin
-
-publishers:
-  - name: tyk-identity-broker-unstable
-    env:
-      - PACKAGECLOUD_TOKEN={{ .Env.PACKAGECLOUD_TOKEN }}
-      - REPO=tyk/tyk-identity-broker-unstable
-      - RPMVERS={{ .Env.RPMVERS }}
-      - DEBVERS={{ .Env.DEBVERS }}
-    cmd: /pc.sh {{ .ArtifactPath }}
+#    deb:
+#      signature:
+#        key_file: tyk.io.signing.key
+#        type: origin
 
 archives:
 - id: std-linux
@@ -125,7 +64,6 @@ archives:
   files:
     - README.md
     - "ci/install/*"
-
 
 checksum:
   disable: true
