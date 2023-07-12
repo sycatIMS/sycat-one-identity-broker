@@ -79,6 +79,13 @@ jobs:
             *.txt.sig
             *.txt
 
+      - name: Set tag
+        id: targets
+        shell: bash
+        run: |
+          current_tag=${GITHUB_REF##*/}
+          echo "tag=${current_tag}" >> $GITHUB_OUTPUT
+
       - uses: goreleaser/goreleaser-action@v4
         with:
           version: 1.18.2
