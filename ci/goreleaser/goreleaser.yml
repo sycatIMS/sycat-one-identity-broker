@@ -27,7 +27,6 @@ nfpms:
       - std
     formats:
       - deb
-      - rpm
     contents:
       - src: "README.md"
         dst: "/opt/share/docs/tyk-identity-broker/README.md"
