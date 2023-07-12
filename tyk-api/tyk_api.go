@@ -482,11 +482,17 @@ func generateBasicTykSesion(baseAPIID, baseVersion, policyID, orgID string) Sess
 }
 
 func (t *TykAPI) RequestOAuthToken(APIlistenPath, redirect_uri, responseType, clientId, secret, orgID, policyID, BaseAPIID string, userInfo interface{}) (*OAuthResponse, error) {
-	// Create a generic access token withour policy
+	// Create a generic access token with our policy
 	basicSessionState := generateBasicTykSesion(BaseAPIID, "Default", policyID, orgID)
 	basicSessionState.OauthClientID = clientId
 	basicSessionState.MetaData.(map[string]interface{})["AuthProviderUserID"] = userInfo.(goth.User).UserID
 	basicSessionState.MetaData.(map[string]interface{})["AuthProviderSource"] = userInfo.(goth.User).Provider
+
+	basicSessionState.MetaData.(map[string]interface{})["AuthProviderUserEmail"] = userInfo.(goth.User).Email
+	basicSessionState.MetaData.(map[string]interface{})["AuthProviderUserFirstName"] = userInfo.(goth.User).FirstName
+	basicSessionState.MetaData.(map[string]interface{})["AuthProviderUserLastName"] = userInfo.(goth.User).LastName
+
+	basicSessionState.MetaData.(map[string]interface{})["RawData"] = userInfo.(goth.User).RawData
 	basicSessionState.MetaData.(map[string]interface{})["AccessToken"] = userInfo.(goth.User).AccessToken
 	basicSessionState.MetaData.(map[string]interface{})["AccessTokenSecret"] = userInfo.(goth.User).AccessTokenSecret
 
@@ -534,7 +540,7 @@ func (t *TykAPI) RequestOAuthToken(APIlistenPath, redirect_uri, responseType, cl
 }
 
 func (t *TykAPI) RequestStandardToken(orgID, policyID, BaseAPIID, UserCred string, expires int64, userInfo interface{}) (*TokenResponse, error) {
-	// Create a generic access token withour policy
+	// Create a generic access token with our policy
 	basicSessionState := generateBasicTykSesion(BaseAPIID, "Default", policyID, orgID)
 	basicSessionState.MetaData.(map[string]interface{})["AuthProviderUserID"] = userInfo.(goth.User).UserID
 	basicSessionState.MetaData.(map[string]interface{})["AuthProviderSource"] = userInfo.(goth.User).Provider
