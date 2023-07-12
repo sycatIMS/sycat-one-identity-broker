@@ -4,13 +4,7 @@
 
 
 # Distribution channels covered by this workflow
-# - Ubuntu and Debian
-# - RHEL/OL
-# - tarballs
 # - docker hub
-# - devenv ECR
-# - AWS mktplace
-# - Cloudsmith
 
 name: Release
 
@@ -24,8 +18,8 @@ on:
       - 'v*'
 
 env:
-  SLACK_CLI_TOKEN: ${{ secrets.BENDER_TOKEN }}
   GOPRIVATE: github.com/TykTechnologies
+  REGISTRY: ghcr.io
   
 jobs:
   goreleaser:
@@ -39,7 +33,6 @@ jobs:
         include:
           - golang_cross: 1.19-bullseye
             goreleaser: 'ci/goreleaser/goreleaser.yml'
-            rpmvers: 'el/7 el/8'
             debvers: 'ubuntu/xenial ubuntu/bionic debian/jessie ubuntu/focal debian/buster debian/bullseye'
     outputs:
       tag: ${{ steps.targets.outputs.tag }}
@@ -63,26 +56,20 @@ jobs:
 
       - uses: docker/setup-buildx-action@v2
 
-      - name: Login to DockerHub
+      - name: Login to GithHub Registry
         if: startsWith(github.ref, 'refs/tags')
         uses: docker/login-action@v2
         with:
-          username: ${{ secrets.DOCKER_USERNAME }}
-          password: ${{ secrets.DOCKER_PASSWORD }}
-      - name: Login to Cloudsmith
-        if: startsWith(github.ref, 'refs/tags')
-        uses: docker/login-action@v2
-        with:
-          registry: docker.tyk.io
-          username: ${{ secrets.CLOUDSMITH_USERNAME }}
-          password: ${{ secrets.CLOUDSMITH_API_KEY }}
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor  }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Unlock agent and set tag
         id: targets
         shell: bash
         env:
           NFPM_STD_PASSPHRASE: ${{ secrets.SIGNING_KEY_PASSPHRASE }}
-          GPG_FINGERPRINT: 12B5D62C28F57592D1575BD51ED14C59E37DAC20
+          GPG_FINGERPRINT: 284069BE9E79B0E137E275F921D9F7E1C24DC664
           PKG_SIGNING_KEY: ${{ secrets.SIGNING_KEY }}
         run: |
           ci/bin/unlock-agent.sh
@@ -117,8 +104,6 @@ jobs:
           PKG_SIGNING_KEY: ${{ secrets.SIGNING_KEY }}
           GOLANG_CROSS: ${{ matrix.golang_cross }}
           DEBVERS: ${{ matrix.debvers }}
-          RPMVERS: ${{ matrix.rpmvers }}
-          PACKAGECLOUD_TOKEN: ${{ secrets.PACKAGECLOUD_TOKEN }}
 
       - uses: actions/upload-artifact@v3
         with:
@@ -127,14 +112,6 @@ jobs:
           path: |
             dist/*.deb
             !dist/*PAYG*.deb
-
-      - uses: actions/upload-artifact@v3
-        with:
-          name: rpm
-          retention-days: 1
-          path: |
-            dist/*.rpm
-            !dist/*PAYG*.rpm
   ci:
     needs:
       - goreleaser
@@ -145,39 +122,6 @@ jobs:
         uses: actions/checkout@v3
         with:
           fetch-depth: 1
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v2
-        with:
-          cli_config_credentials_token: ${{ secrets.TF_API_TOKEN }}
-          terraform_wrapper: false
-
-      - name: Get AWS creds from Terraform remote state
-        id: aws-creds
-        run: |
-          cd ci/terraform
-          terraform init -input=false
-          terraform refresh 2>&1 >/dev/null
-          eval $(terraform output -json tyk-identity-broker | jq -r 'to_entries[] | [.key,.value] | join("=")')
-          region=$(terraform output region | xargs)
-          [ -z "$key" -o -z "$secret" -o -z "$region" ] && exit 1
-          echo "secret=$secret" >> $GITHUB_OUTPUT
-          echo "key=$key" >> $GITHUB_OUTPUT
-          echo "region=$region" >> $GITHUB_OUTPUT
-
-      - name: Configure AWS credentials for use
-        uses: aws-actions/configure-aws-credentials@v1
-        with:
-          aws-access-key-id: ${{ steps.aws-creds.outputs.key }}
-          aws-secret-access-key: ${{ steps.aws-creds.outputs.secret }}
-          aws-region: ${{ steps.aws-creds.outputs.region }}
-
-      - name: Login to Amazon ECR
-        id: login-ecr
-        uses: aws-actions/amazon-ecr-login@v1
-
-      - uses: actions/download-artifact@v3
-        with:
-          name: deb
 
       - uses: docker/setup-qemu-action@v2
 
@@ -191,133 +135,63 @@ jobs:
           file: ci/Dockerfile.std
           platforms: linux/amd64,linux/arm64
           tags: |
-            ${{ steps.login-ecr.outputs.registry }}/tyk-identity-broker:${{ needs.goreleaser.outputs.tag }}
-            ${{ steps.login-ecr.outputs.registry }}/tyk-identity-broker:${{ github.sha }}
+            ${{ REGISTRY }}/sycat-one-tyk-identity-broker:${{ needs.goreleaser.outputs.tag }}
+            ${{ REGISTRY }}/sycat-one-identity-broker:${{ github.sha }}
 
-      - name: Tell gromit about new build
-        id: gromit
-        run: |
-          # Remember to remove the true when TD-626 is fixed
-          curl -fsSL -H "Authorization: ${{secrets.GROMIT_TOKEN}}" 'https://domu-kun.cloud.tyk.io/gromit/newbuild' \
-                 -X POST -d '{ "repo": "${{ github.repository}}", "ref": "${{ github.ref }}", "sha": "${{ github.sha }}" }' || true
+#      - name: Tell gromit about new build
+#        id: gromit
+#        run: |
+#          # Remember to remove the true when TD-626 is fixed
+#          curl -fsSL -H "Authorization: ${{secrets.GROMIT_TOKEN}}" 'https://domu-kun.cloud.tyk.io/gromit/newbuild' \
+#                 -X POST -d '{ "repo": "${{ github.repository}}", "ref": "${{ github.ref }}", "sha": "${{ github.sha }}" }' || true
+#
 
-      - name: Tell integration channel
-        if: ${{ failure() }}
-        run: |
-          colour=bad
-          pretext=":boom: Could not add new build $${{ github.ref }} from ${{ github.repository }} to CD. Please review this run and correct it if needed. See https://github.com/TykTechnologies/tyk-ci/wiki/IntegrationEnvironment for what this is about."
-          curl https://raw.githubusercontent.com/rockymadden/slack-cli/master/src/slack -o /tmp/slack && chmod +x /tmp/slack
-          /tmp/slack chat send \
-          --actions '{"type": "button", "style": "primary", "text": "See log", "url": "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"}' \
-          --author 'Bender' \
-          --author-icon 'https://hcoop.net/~alephnull/bender/bender-arms.jpg' \
-          --author-link 'https://github.com/TykTechnologies/tyk-ci' \
-          --channel '#service-integration' \
-          --color $colour \
-          --fields '{"title": "Repo", "value": "${{ github.repository }}", "short": false}' \
-          --footer 'github-actions' \
-          --footer-icon 'https://assets-cdn.github.com/images/modules/logos_page/Octocat.png' \
-          --image 'https://assets-cdn.github.com/images/modules/logos_page/Octocat.png' \
-          --pretext "$pretext" \
-          --text 'Commit message: ${{ github.event.head_commit.message }}' \
-          --title 'Failed to add new build for CD' \
-          --title-link 'https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}'
 
-  sbom:
-    needs: ci
-    uses: TykTechnologies/github-actions/.github/workflows/sbom.yaml@main
-    secrets:
-      TF_API_TOKEN: ${{ secrets.TF_API_TOKEN }}
-      DEPDASH_URL: ${{ secrets.DEPDASH_URL }}
-      DEPDASH_KEY: ${{ secrets.DEPDASH_KEY }}
-      ORG_GH_TOKEN: ${{ secrets.ORG_GH_TOKEN }}
-
-  upgrade-deb:
-    if: startsWith(github.ref, 'refs/tags') && !github.event.pull_request.draft
-    runs-on: ubuntu-latest
-    needs: goreleaser
-    strategy:
-      fail-fast: false
-      matrix:
-        arch:
-          - amd64
-          - arm64
-        distro:
-          - ubuntu:xenial
-          - ubuntu:bionic
-          - ubuntu:focal
-          - debian:bullseye
-
-    steps:
-      - uses: actions/checkout@v3
-        with:
-          fetch-depth: 1
-
-      - uses: actions/download-artifact@v3
-        with:
-          name: deb
-
-      - uses: docker/setup-qemu-action@v2
-
-      - uses: docker/setup-buildx-action@v2
-
-      - name: generate dockerfile
-        run: |
-          echo 'FROM ${{ matrix.distro }}
-          ARG TARGETARCH
-          COPY tyk-identity-broker*_${TARGETARCH}.deb /tyk-identity-broker.deb
-          RUN apt-get update && apt-get install -y curl
-          RUN curl -fsSL https://packagecloud.io/install/repositories/tyk/tyk-identity-broker/script.deb.sh | bash && apt-get install -y tyk-identity-broker=1.1.0
-          RUN dpkg -i tyk-identity-broker.deb
-          ' > Dockerfile
-
-      - name: install on ${{ matrix.distro }}
-        uses: docker/build-push-action@v3
-        with:
-          context: "."
-          platforms: linux/${{ matrix.arch }}
-          file: Dockerfile
-          push: false
-
-  upgrade-rpm:
-    if: startsWith(github.ref, 'refs/tags') && !github.event.pull_request.draft
-    needs: goreleaser
-    runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        distro:
-          - ubi7/ubi
-          - ubi8/ubi
-
-    steps:
-      - uses: actions/checkout@v3
-        with:
-          fetch-depth: 1
-
-      - uses: actions/download-artifact@v3
-        with:
-          name: rpm
-
-      - uses: docker/setup-buildx-action@v2
-
-      - name: generate dockerfile
-        run: |
-          echo 'FROM registry.access.redhat.com/${{ matrix.distro }}
-          COPY tyk-identity-broker*.x86_64.rpm /tyk-identity-broker.rpm
-          RUN yum install -y curl
-          RUN curl -fsSL https://packagecloud.io/install/repositories/tyk/tyk-identity-broker/script.rpm.sh | bash && yum install -y tyk-identity-broker-1.1.0-1
-          RUN curl https://keyserver.tyk.io/tyk.io.rpm.signing.key.2020 -o tyk-identity-broker.key && rpm --import tyk-identity-broker.key
-          RUN rpm --checksig tyk-identity-broker.rpm
-          RUN rpm -Uvh --force tyk-identity-broker.rpm
-          ' > Dockerfile
-
-      - name: install on ${{ matrix.distro }}
-        uses: docker/build-push-action@v3
-        with:
-          context: "."
-          file: Dockerfile
-          push: false
+#  upgrade-deb:
+#    if: startsWith(github.ref, 'refs/tags') && !github.event.pull_request.draft
+#    runs-on: ubuntu-latest
+#    needs: goreleaser
+#    strategy:
+#      fail-fast: false
+#      matrix:
+#        arch:
+#          - amd64
+#          - arm64
+#        distro:
+#          - ubuntu:xenial
+#          - ubuntu:bionic
+#          - ubuntu:focal
+#          - debian:bullseye
+#
+#    steps:
+#      - uses: actions/checkout@v3
+#        with:
+#          fetch-depth: 1
+#
+#      - uses: actions/download-artifact@v3
+#        with:
+#          name: deb
+#
+#      - uses: docker/setup-qemu-action@v2
+#
+#      - uses: docker/setup-buildx-action@v2
+#
+#      - name: generate dockerfile
+#        run: |
+#          echo 'FROM ${{ matrix.distro }}
+#          ARG TARGETARCH
+#          COPY tyk-identity-broker*_${TARGETARCH}.deb /tyk-identity-broker.deb
+#          RUN apt-get update
+#          RUN dpkg -i tyk-identity-broker.deb
+#          ' > Dockerfile
+#
+#      - name: install on ${{ matrix.distro }}
+#        uses: docker/build-push-action@v3
+#        with:
+#          context: "."
+#          platforms: linux/${{ matrix.arch }}
+#          file: Dockerfile
+#          push: false
 
   smoke-tests:
     if: startsWith(github.ref, 'refs/tags') && !github.event.pull_request.draft
@@ -359,33 +233,3 @@ jobs:
                   cd -
               fi
           done
-
-  # AWS updates only for stable releases
-  aws-mktplace-byol:
-    if: ( 'a' == 'b' )
-    runs-on: ubuntu-latest
-    needs:
-      - smoke-tests
-    strategy:
-      matrix:
-        flavour:
-          - al2
-          - rhel
-
-    steps:
-      - name: Checkout tyk-identity-broker
-        uses: actions/checkout@v3
-        with:
-          fetch-depth: 1
-
-      - uses: actions/download-artifact@v3
-        with:
-          name: rpm
-          path: aws
-
-      - name: Packer build
-        working-directory: ./ci/aws
-        run: |
-          export VERSION=${{ needs.goreleaser.outputs.tag }}
-          packer validate -var-file=${{ matrix.flavour }}.vars.json byol.pkr.hcl
-          packer build -var-file=${{ matrix.flavour }}.vars.json byol.pkr.hcl

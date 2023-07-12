@@ -8,7 +8,7 @@
 builds:
   - id: std
     ldflags:
-      - -X github.com/TykTechnologies/tyk-identity-broker/main.VERSION={{.Version}} -X github.com/TykTechnologies/tyk-identity-broker/main.Commit={{.FullCommit}} -X github.com/TykTechnologies/tyk-identity-broker/main.buildDate={{.Date}} -X github.com/TykTechnologies/tyk-identity-broker/main.builtBy=goreleaser
+      - -X github.com/sycatIMS/tyk-identity-broker/main.VERSION={{.Version}} -X github.com/sycatIMS/tyk-identity-broker/main.Commit={{.FullCommit}} -X github.com/sycatIMS/tyk-identity-broker/main.buildDate={{.Date}} -X github.com/sycatIMS/tyk-identity-broker/main.builtBy=goreleaser
     goos:
       - linux
     goarch:
@@ -100,21 +100,10 @@ nfpms:
       postremove: "ci/install/post_remove.sh"
     bindir: "/opt/tyk-identity-broker"
     overrides:
-      rpm:
-        file_name_template: '{{ .PackageName }}-{{ replace .Version "-" "~" }}-1.{{ .Arch }}{{ if .Arm }}v{{ .Arm }}{{ end }}{{ if .Mips }}_{{ .Mips }}{{ end }}'
-        replacements:
-          amd64: x86_64
-          arm: aarch64
-          arm64: aarch64
       deb:
         file_name_template: '{{ .PackageName }}_{{ replace .Version "-" "~" }}_{{ .Arch }}{{ if .Arm }}v{{ .Arm }}{{ end }}{{ if .Mips }}_{{ .Mips }}{{ end }}'
         replacements:
           arm: arm64
-    rpm:
-      scripts:
-        posttrans: ci/install/post_trans.sh
-      signature:
-        key_file: tyk.io.signing.key
     deb:
       signature:
         key_file: tyk.io.signing.key
