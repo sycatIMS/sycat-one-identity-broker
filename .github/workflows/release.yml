@@ -135,8 +135,8 @@ jobs:
           file: ci/Dockerfile.std
           platforms: linux/amd64,linux/arm64
           tags: |
-            ${{ REGISTRY }}/sycat-one-tyk-identity-broker:${{ needs.goreleaser.outputs.tag }}
-            ${{ REGISTRY }}/sycat-one-identity-broker:${{ github.sha }}
+            ${{ env.REGISTRY }}/sycat-one-tyk-identity-broker:${{ needs.goreleaser.outputs.tag }}
+            ${{ env.REGISTRY }}/sycat-one-identity-broker:${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
