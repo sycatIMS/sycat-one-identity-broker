@@ -37,7 +37,7 @@ EXPOSE $PORTS
 WORKDIR /opt/tyk-identity-broker/
 
 COPY ./ci/config/config.conf ./tib.conf
-COPY ./ci/config/profiles.json ./profiles.json
+COPY ./ci/config/profiles.template.json ./profiles.json
 COPY ./ci/startup.sh ./startup.sh
 
 # Uncomment this to test in dev
