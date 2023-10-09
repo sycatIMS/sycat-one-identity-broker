@@ -1,0 +1,99 @@
+[
+    {
+      "ID": "saml-for-auth-api-token",
+      "OrgID": "",
+      "ActionType": "GenerateOAuthTokenForClient",
+      "MatchedPolicyID": "",
+      "Type": "passthrough",
+      "ProviderName": "SAMLProvider",
+      "ProviderConfig": {
+        "CertLocation": "/opt/tyk-identity-broker/certs/SAML.pem",
+        "ForceAuthentication": false,
+        "IDPMetaDataURL": "http://host.docker.internal:9011/samlv2/metadata/c35cfe86-bc29-2332-3aa0-5a02b9fa6827",
+        "SAMLBaseURL": "http://localhost:3010/"
+      },
+      "IdentityHandlerConfig": {
+        "OAuth": {
+          "Secret": "",
+          "RedirectURI": "http://localhost:5173"
+        }
+      }
+    },
+    {
+      "ActionType": "GenerateOAuthTokenForClient",
+      "ID": "azure",
+      "MatchedPolicyID": "default",
+      "OrgID": "",
+      "IdentityHandlerConfig": {
+        "DisableOneTokenPerAPI": false,
+        "OAuth": {
+          "APIListenPath": "api",
+          "BaseAPIID": "",
+          "ClientId": "sycat-oauth",
+          "RedirectURI": "http://localhost:5173",
+          "ResponseType": "code",
+          "Secret": "",
+          "NoRedirect": false
+        }
+      },
+      "ProviderConfig": {
+        "CallbackBaseURL": "http://localhost:5173/api",
+        "FailureRedirect": "http://localhost:5173/auth/error",
+        "UseProviders": [
+          {
+            "Name": "openid-connect",
+            "Key": "",
+            "Secret": "",
+            "Scopes": [
+              "openid",
+              "email"
+            ],
+            "DiscoverURL": "https://login.microsoftonline.com/3e12be86-180c-408b-815d-a91a297e3eaa/v2.0/.well-known/openid-configuration",
+            "SkipUserInfoRequest": false
+          }
+        ]
+      },
+      "ProviderName": "SocialProvider",
+      "ReturnURL": "",
+      "Type": "passthrough"
+    },
+    {
+      "ActionType": "GenerateOAuthTokenForClient",
+      "ID": "ldap",
+      "MatchedPolicyID": "default",
+      "OrgID": "",
+      "IdentityHandlerConfig": {
+        "DisableOneTokenPerAPI": false,
+        "OAuth": {
+          "APIListenPath": "api",
+          "BaseAPIID": "",
+          "ClientId": "sycat-oauth",
+          "RedirectURI": "http://localhost:5173",
+          "ResponseType": "code",
+          "Secret": "",
+          "NoRedirect": true
+        }
+      },
+      "ProviderConfig": {
+        "FailureRedirect": "http://localhost:5173/auth/error",
+        "LDAPAttributes": [
+          "mail",
+          "givenName",
+          "sn",
+          "memberOf"
+        ],
+        "LDAPEmailAttribute": "mail",
+        "LDAPFirstNameAttribute": "givenName",
+        "LDAPLastNameAttribute": "sn",
+        "CustomUserGroupField": "memberOf",
+        "LDAPUseSSL": false,
+        "LDAPPort": "389",
+        "LDAPServer": "openldap",
+        "LDAPUserDN": "uid=*USERNAME*,ou=people,dc=example,dc=org"
+      },
+      "ProviderName": "ADProvider",
+      "ReturnURL": "",
+      "Type": "passthrough"
+    }
+  ]
+  
