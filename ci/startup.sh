@@ -11,7 +11,7 @@ make_get_request() {
 }
 
 # Make POST request to check if Tyk is running
-response=$(make_get_request "http://tyk-gateway/hello")
+response=$(make_get_request "http://tyk-gateway:8080/hello")
 
 # Check response status and content
 if [[ $(echo "$response" | jq -r '.status') != "pass" ]]; then
@@ -20,7 +20,7 @@ if [[ $(echo "$response" | jq -r '.status') != "pass" ]]; then
 fi
 
 # Check if OAuth client "sycat-oauth" exists
-response=$(make_get_request "http://tyk-gateway/tyk/oauth/clients/1")
+response=$(make_get_request "http://tyk-gateway:8080/tyk/oauth/clients/1")
 
 if [[ ! "$response" == *"sycat-oauth"* ]]; then
 	echo "Creating new OAuth Client"
@@ -53,6 +53,6 @@ if [[ ! "$response" == *"sycat-oauth"* ]]; then
 fi
 
 # Call gateway reload
-make_get_request "http://localhost:8080/tyk/reload"
+make_get_request "http://tyk-gateway:8080/tyk/reload"
 
 /opt/tyk-identity-broker/tyk-identity-broker --conf=/opt/tyk-identity-broker/tib.conf

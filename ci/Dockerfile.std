@@ -10,9 +10,6 @@ ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update \
     && apt-get dist-upgrade -y ca-certificates
 
-# We need jq and curl to run our startup scrip
-RUN apt-get install -y jq 
-
 # Remove some things to decrease CVE surface
 RUN  apt-get remove -y --allow-remove-essential --auto-remove libtiff5 ncurses-base \
 	&& rm /usr/bin/passwd && rm /usr/sbin/adduser
@@ -25,6 +22,8 @@ RUN rm -rf /root/.cache \
     && find /usr/lib -type f -name '*.a' -delete \
     && find /usr/lib -type f -name '*.o' -delete
 
+# We need jq and curl to run our startup scrip
+RUN apt-get install -y jq curl
 
 # Comment this to test in dev
 COPY *${TARGETARCH}.deb /
@@ -41,6 +40,8 @@ COPY ./ci/config/profiles.template.json ./profiles.json
 COPY ./ci/startup.sh ./startup.sh
 
 # Uncomment this to test in dev
-# COPY tyk-identity-broker .
+#COPY tyk-identity-broker .
 
-ENTRYPOINT ["startup.sh" ]
+RUN chmod +x ./startup.sh
+
+ENTRYPOINT ["bash","./startup.sh" ]
