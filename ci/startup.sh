@@ -1,4 +1,4 @@
-sleep 15
+sleep 5
 
 # Function to make HTTP POST request
 make_post_request() {
@@ -26,7 +26,7 @@ if [[ ! "$response" == *"sycat-oauth"* ]]; then
 	echo "Creating new OAuth Client"
 
     # Create new OAuth client
-    create_client_response=$(make_post_request "http://tyk-gateway/tyk/oauth/clients/create" '{
+    create_client_response=$(make_post_request "http://tyk-gateway:8080/tyk/oauth/clients/create" '{
         "client_id": "sycat-oauth",
         "policy_id": "default",
         "redirect_uri": "'"${FRONTEND_URI//[$'\t\r\n ']}"'"
@@ -35,21 +35,24 @@ if [[ ! "$response" == *"sycat-oauth"* ]]; then
     # Extract redirect_uri and secret from the response
     redirect_uri=$(echo "$create_client_response" | jq -r '.redirect_uri')
     secret=$(echo "$create_client_response" | jq -r '.secret')
+else
+    redirect_uri=$(echo "$response" | jq -r '.[].redirect_uri')
+    secret=$(echo "$response" | jq -r '.[].secret')
+fi
 
-    # Read JSON from "./identity-broker/profiles.json"
-    json_file=/opt/tyk-identity-broker/profiles.json
+# Read JSON from "./identity-broker/profiles.json"
+json_file=/opt/tyk-identity-broker/profiles.json
 
-    if [ -f "$json_file" ]; then
-        # Read JSON file
-        json_data=$(cat "$json_file")
-		
-        # Replace values for IdentityHandlerConfig.OAuth.Secret and IdentityHandlerConfig.OAuth.RedirectURI
-        updated_data=$(echo "$json_data" | jq --arg redirect_uri "$redirect_uri" --arg secret "$secret" '.[].IdentityHandlerConfig.OAuth.Secret = $secret | .[].IdentityHandlerConfig.OAuth.RedirectURI = $redirect_uri')
+if [ -f "$json_file" ]; then
+    # Read JSON file
+    json_data=$(cat "$json_file")
 
-        # Save updated JSON back to file
-		echo "Saving profiles"
-        echo "$updated_data" > "$json_file"
-    fi
+    # Replace values for IdentityHandlerConfig.OAuth.Secret and IdentityHandlerConfig.OAuth.RedirectURI
+    updated_data=$(echo "$json_data" | jq --arg redirect_uri "$redirect_uri" --arg secret "$secret" '.[].IdentityHandlerConfig.OAuth.Secret = $secret | .[].IdentityHandlerConfig.OAuth.RedirectURI = $redirect_uri')
+
+    # Save updated JSON back to file
+    echo "Saving profiles"
+    echo "$updated_data" > "$json_file"
 fi
 
 # Call gateway reload
