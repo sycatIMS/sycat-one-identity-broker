@@ -38,7 +38,7 @@ WORKDIR /opt/tyk-identity-broker/
 
 COPY ./ci/config/config.conf ./tib.conf
 COPY ./ci/config/profiles.json ./profiles.json
-COPY ./ci/start.sh ./startup.sh
+COPY ./ci/startup.sh ./startup.sh
 
 # Uncomment this to test in dev
 # COPY tyk-identity-broker .
