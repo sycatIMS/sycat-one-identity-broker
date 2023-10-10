@@ -50,6 +50,12 @@ if [ -f "$json_file" ]; then
     # Replace values for IdentityHandlerConfig.OAuth.Secret and IdentityHandlerConfig.OAuth.RedirectURI
     updated_data=$(echo "$json_data" | jq --arg redirect_uri "$redirect_uri" --arg secret "$secret" '.[].IdentityHandlerConfig.OAuth.Secret = $secret | .[].IdentityHandlerConfig.OAuth.RedirectURI = $redirect_uri')
 
+    if [ "${AZURE_SECRET}" != "" ] && [ "${AZURE_KEY}" != "" ]; then
+      # Replace Secrets for Azure
+      # ToDo: find a way to no need use a specific index, but search by id "azure"
+      updated_data=$(echo "$updated_data" | jq --arg azure_secret "${AZURE_SECRET}" --arg azure_key "${AZURE_KEY}" '.[1].ProviderConfig.UseProviders[].Secret = $azure_secret | .[1].ProviderConfig.UseProviders[].Key = $azure_key')
+    fi
+
     # Save updated JSON back to file
     echo "Saving profiles"
     echo "$updated_data" > "$json_file"
