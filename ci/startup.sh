@@ -25,11 +25,18 @@ response=$(make_get_request "http://tyk-gateway:8080/tyk/oauth/clients/1")
 if [[ ! "$response" == *"sycat-oauth"* ]]; then
 	echo "Creating new OAuth Client"
 
+
+    if [ "${FRONTEND_URL}" != "" ]; then
+        frontend_uri="${FRONTEND_URL//[$'\t\r\n ']}"
+    else
+        frontend_uri="${UFFIZZI_URL//[$'\t\r\n ']}"
+    fi
+
     # Create new OAuth client
     create_client_response=$(make_post_request "http://tyk-gateway:8080/tyk/oauth/clients/create" '{
         "client_id": "sycat-oauth",
         "policy_id": "default",
-        "redirect_uri": "'"${FRONTEND_URI//[$'\t\r\n ']}"'"
+        "redirect_uri": "'$frontend_uri'"
     }')
 
     # Extract redirect_uri and secret from the response
