@@ -20,7 +20,7 @@ if [[ $(echo "$response" | jq -r '.status') != "pass" ]]; then
 fi
 
 # Check if OAuth client "sycat-oauth" exists
-response=$(make_get_request "http://tyk-gateway:8080/tyk/oauth/clients/1")
+response=$(make_get_request "http://tyk-gateway:8080/tyk/oauth/clients/${AUTH_API_ID//[$'\t\r\n ']}")
 
 if [[ ! "$response" == *"sycat-oauth"* ]]; then
 	echo "Creating new OAuth Client"
