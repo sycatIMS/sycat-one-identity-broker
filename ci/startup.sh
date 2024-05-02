@@ -10,8 +10,10 @@ make_get_request() {
     curl -X GET "$1" -s  -H "x-tyk-authorization: ${TYK_IB_TYKAPISETTINGS_GATEWAYCONFIG_ADMINSECRET//[$'\t\r\n ']}"
 }
 
+gateway_uri="${TYK_IB_TYKAPISETTINGS_GATEWAYCONFIG_ENDPOINT//[$'\t\r\n ']}:${TYK_IB_TYKAPISETTINGS_GATEWAYCONFIG_PORT//[$'\t\r\n ']}"
+
 # Make POST request to check if Tyk is running
-response=$(make_get_request "http://tyk-gateway:8080/hello")
+response=$(make_get_request "$gateway_uri/hello")
 
 # Check response status and content
 if [[ $(echo "$response" | jq -r '.status') != "pass" ]]; then
@@ -20,7 +22,7 @@ if [[ $(echo "$response" | jq -r '.status') != "pass" ]]; then
 fi
 
 # Check if OAuth client "sycat-oauth" exists
-response=$(make_get_request "http://tyk-gateway:8080/tyk/oauth/clients/1")
+response=$(make_get_request "$gateway_uri/tyk/oauth/clients/1")
 
 if [[ ! "$response" == *"sycat-oauth"* ]]; then
 	echo "Creating new OAuth Client"
@@ -33,7 +35,7 @@ if [[ ! "$response" == *"sycat-oauth"* ]]; then
     fi
 
     # Create new OAuth client
-    create_client_response=$(make_post_request "http://tyk-gateway:8080/tyk/oauth/clients/create" '{
+    create_client_response=$(make_post_request "$gateway_uri/tyk/oauth/clients/create" '{
         "client_id": "sycat-oauth",
         "policy_id": "default",
         "redirect_uri": "'$frontend_uri'"
@@ -69,6 +71,6 @@ if [ -f "$json_file" ]; then
 fi
 
 # Call gateway reload
-make_get_request "http://tyk-gateway:8080/tyk/reload"
+make_get_request "$gateway_uri/tyk/reload"
 
 /opt/tyk-identity-broker/tyk-identity-broker --conf=/opt/tyk-identity-broker/tib.conf
